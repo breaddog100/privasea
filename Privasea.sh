@@ -114,7 +114,7 @@ function start_privasea_client(){
 
 # 客户端提交任务
 function submit_a_task(){
-
+	echo "submit_a_task"
 }
 
 # 停止客户端
@@ -125,7 +125,7 @@ function stop_privasea_client(){
 
 # 查看客户端日志
 function view_privasea_client_logs(){
-
+	echo "view_privasea_client_logs"
 }
 
 # 卸载客户端
