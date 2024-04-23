@@ -1,26 +1,41 @@
 #!/bin/bash
 
-set -e
 # 脚本保存路径
 SCRIPT_PATH="$HOME/Privasea.sh"
 
 # 节点安装功能
 function install_node() {
 
-	# 更新系统
-	sudo apt update && sudo apt upgrade -y
-	
-	# 安装Docker
-	curl -fsSL https://test.docker.com -o test-docker.sh
-	sudo sh test-docker.sh
-	sudo systemctl enable docker
-	sudo systemctl start docker
-	sudo groupadd docker
-	sudo usermod -aG docker $USER
-	docker version
+	# 检查Docker是否已安装
+	if [ -x "$(command -v docker)" ]; then
+	    echo "Docker is already installed."
+	else
+	    echo "Docker is not installed. Installing Docker..."
+	    # 更新apt包索引
+	    sudo apt-get update
+	    # 安装包以允许apt通过HTTPS使用仓库
+	    sudo apt-get install \
+	        apt-transport-https \
+	        ca-certificates \
+	        curl \
+	        software-properties-common
+	    # 添加Docker的官方GPG密钥
+	    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+	    # 设置稳定仓库
+	    sudo add-apt-repository \
+	        "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+	        $(lsb_release -cs) \
+	        stable"
+	    # 再次更新apt包索引
+	    sudo apt-get update
+	    # 安装最新版本的Docker CE
+	    sudo apt-get install docker-ce
+	    # 输出Docker的版本号来验证安装
+	    docker --version
+	fi
 	
     # 构建Privasea代码
-    docker pull privasea/node-calc:v0.0.1
+    sudo docker pull privasea/node-calc:v0.0.1
     echo '====================== 部署完成 ==========================='
 }
 
@@ -155,7 +170,7 @@ function main_menu() {
     	echo "沟通电报群：https://t.me/lumaogogogo"
     	echo "最低配置：6C8G100G，Privanetix节点需要公网IP"
         echo "请选择要执行的操作:"
-        echo "--------------Privanetix节点相关选项---------------"
+        echo "--------------Privanetix节点相关选项--------------"
         echo "1. 部署节点"
         echo "2. 创建账号"
         echo "3. 启动节点"
