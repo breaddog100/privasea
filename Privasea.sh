@@ -36,13 +36,14 @@ function install_node() {
 	
     # 构建Privasea代码
     sudo docker pull privasea/node-calc:v0.0.1
+    # 拉取客户端
+	sudo docker pull privasea/node-client:v0.0.1
     echo '====================== 部署完成 ==========================='
 }
 
 # 创建账号及密钥文件
 function create_privasea_account(){
-	# 拉取 Privasea 客户端
-	sudo docker pull privasea/node-client:v0.0.1
+	
 	mkdir -p $HOME/keys
 	sudo docker run -it -v $HOME/keys:/app/keys privasea/node-client:v0.0.1 account
 	echo '请备份账号信息!'
@@ -65,7 +66,7 @@ function uninstall_node() {
             sudo docker stop $NODE_NAME
             sudo docker rm $NODE_NAME
             sudo docker rmi $NODE_NAME
-            echo "验证节点卸载完成。"
+            echo "验证节点卸载完成，$HOME/keys中保存了账户信息，被保留了下来，备份后手动删除即可。"
             ;;
         *)
             echo "取消卸载操作。"
@@ -77,26 +78,36 @@ function uninstall_node() {
 function stop_node(){
 	read -p "请输入节点名称: " NODE_NAME
 	sudo docker stop $NODE_NAME
+	echo "节点已停止。"
 }
 
 # 启动Privasea节点
 function start_node(){
 	read -p "请输入节点名称: " NODE_NAME
 	read -p "请输入账号文件名: " ACCOUNT
-	read -p "请输入账号密码: " PASSWORD
+	read -sp "请输入账号密码: " PASSWORD
 	read -p "请输入公网IP: " PUBLIC_IP
+	echo "是否有tBNB和TT(测试代币)？[Y/N]"
+    read -r -p "请确认: " response
+    case "$response" in
+        [yY][eE][sS]|[yY]) 
+            # 检查端口 8181 是否被占用
+			ss -ltn | grep 8181 > /dev/null
+			if [ $? -eq 0 ]; then
+			    echo "端口 8181 已被占用，请检查并重启节点。"
+			    exit 1
+			else
+			    echo "正在启动..."
+			fi
+		
+			sudo docker run -d -p 8181:8181 -e HOST=$PUBLIC_IP:8181  -e KEYSTORE=$ACCOUNT -e KEYSTORE_PASSWORD=$PASSWORD  -v $HOME/keys:/app/config --name $NODE_NAME privasea/node-calc:v0.0.1
+			echo "$NODE_NAME节点已启动"
+            ;;
+        *)
+            echo "退出。"
+            ;;
+    esac
 	
-	# 检查端口 8181 是否被占用
-	ss -ltn | grep 8181 > /dev/null
-	if [ $? -eq 0 ]; then
-	    echo "端口 8181 已被占用，请检查并重启节点。"
-	    exit 1
-	else
-	    echo "正在启动..."
-	fi
-
-	sudo docker run -d -p 8181:8181 -e HOST=$PUBLIC_IP:8181  -e KEYSTORE=$ACCOUNT -e KEYSTORE_PASSWORD=$PASSWORD  -v $HOME/keys:/app/config --name $NODE_NAME privasea/node-calc:v0.0.1
-	echo "$NODE_NAME节点已启动"
 }
 
 # 部署客户端
@@ -131,21 +142,17 @@ function install_privasea_client(){
 	
     # 构建客户端代码
 	sudo docker pull privasea/node-client:v0.0.1
-	
+	echo '====================== 部署完成 ==========================='
 }
 
 # 启动客户端
 function start_privasea_client(){
+
 	read -p "请输入客户端名称: " CLIENT_NAME
 	read -p "请输入账号文件名: " ACCOUNT
-	read -p "请输入账号密码: " PASSWORD
-	
+	read -sp "请输入账号密码: " PASSWORD
+		
 	sudo docker run -it -e KEYSTORE_PASSWORD=$PASSWORD  -v $HOME/keys:/app/config --name $CLIENT_NAME privasea/node-client:v0.0.1 task --keystore $ACCOUNT
-}
-
-# 客户端提交任务
-function submit_a_task(){
-	echo "submit_a_task"
 }
 
 # 停止客户端
@@ -156,7 +163,8 @@ function stop_privasea_client(){
 
 # 查看客户端日志
 function view_privasea_client_logs(){
-	echo "view_privasea_client_logs"
+	read -p "请输入客户端名称: " CLIENT_NAME
+	sudo docker logs -f $CLIENT_NAME
 }
 
 # 卸载客户端
@@ -170,7 +178,8 @@ function uninstall_privasea_client(){
             sudo docker stop $CLIENT_NAME
             sudo docker rm $CLIENT_NAME
             sudo docker rmi $CLIENT_NAME
-            echo "客户端卸载完成。"
+            
+            echo "客户端卸载完成，$HOME/keys中保存了账户信息，被保留了下来，备份后手动删除即可。"
             ;;
         *)
             echo "取消卸载操作。"
@@ -196,10 +205,9 @@ function main_menu() {
         echo "------------------客户端相关选项------------------"
         echo "21. 部署客户端"
         echo "22. 启动客户端"
-        echo "23. 提交学习任务"
-        echo "24. 停止客户端"
-        echo "25. 查看客户端日志"
-        echo "26. 卸载客户端"
+        echo "23. 停止客户端"
+        echo "24. 查看客户端日志"
+        echo "25. 卸载客户端"
         echo "-----------------------其他-----------------------"
         echo "0. 退出脚本exit"
         read -p "请输入选项: " OPTION
@@ -213,11 +221,10 @@ function main_menu() {
         6) uninstall_node ;;
         
         21) install_privasea_client ;;
-        21) start_privasea_client ;;
-        21) submit_a_task ;;
-        21) stop_privasea_client ;;
-        21) view_privasea_client_logs ;;
-        21) uninstall_privasea_client ;;
+        22) start_privasea_client ;;
+        23) stop_privasea_client ;;
+        24) view_privasea_client_logs ;;
+        25) uninstall_privasea_client ;;
 
         0) echo "退出脚本。"; exit 0 ;;
         *) echo "无效选项，请重新输入。"; sleep 3 ;;
