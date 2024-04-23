@@ -14,7 +14,7 @@ function install_node() {
 	    # 更新apt包索引
 	    sudo apt-get update
 	    # 安装包以允许apt通过HTTPS使用仓库
-	    sudo apt-get install \
+	    sudo apt-get install -y \
 	        apt-transport-https \
 	        ca-certificates \
 	        curl \
@@ -27,9 +27,9 @@ function install_node() {
 	        $(lsb_release -cs) \
 	        stable"
 	    # 再次更新apt包索引
-	    sudo apt-get update
+	    sudo apt-get update -y
 	    # 安装最新版本的Docker CE
-	    sudo apt-get install docker-ce
+	    sudo apt-get install -y docker-ce
 	    # 输出Docker的版本号来验证安装
 	    docker --version
 	fi
@@ -42,16 +42,16 @@ function install_node() {
 # 创建账号及密钥文件
 function create_privasea_account(){
 	# 拉取 Privasea 客户端
-	docker pull privasea/node-client:v0.0.1
+	sudo docker pull privasea/node-client:v0.0.1
 	mkdir -p $HOME/keys
-	docker run -it -v $HOME/keys:/app/keys privasea/node-client:v0.0.1 account
+	sudo docker run -it -v $HOME/keys:/app/keys privasea/node-client:v0.0.1 account
 	echo '请备份账号信息!'
 }
 
 # 查看privasea节点日志查询
 function view_logs() {
 	read -p "请输入节点名称: " NODE_NAME
-    docker logs -f $NODE_NAME
+    sudo docker logs -f $NODE_NAME
 }
 
 # 卸载验证节点功能
@@ -62,9 +62,9 @@ function uninstall_node() {
     case "$response" in
         [yY][eE][sS]|[yY]) 
             echo "开始卸载验证节点..."
-            docker stop $NODE_NAME
-            docker rm $NODE_NAME
-            docker rmi $NODE_NAME
+            sudo docker stop $NODE_NAME
+            sudo docker rm $NODE_NAME
+            sudo docker rmi $NODE_NAME
             echo "验证节点卸载完成。"
             ;;
         *)
@@ -76,7 +76,7 @@ function uninstall_node() {
 # 停止Privasea节点
 function stop_node(){
 	read -p "请输入节点名称: " NODE_NAME
-	docker stop $NODE_NAME
+	sudo docker stop $NODE_NAME
 }
 
 # 启动Privasea节点
@@ -95,26 +95,42 @@ function start_node(){
 	    echo "正在启动..."
 	fi
 
-	docker run -d -p 8181:8181 -e HOST=$PUBLIC_IP:8181  -e KEYSTORE=$ACCOUNT -e KEYSTORE_PASSWORD=$PASSWORD  -v $HOME/keys:/app/config --name $NODE_NAME privasea/node-calc:v0.0.1
+	sudo docker run -d -p 8181:8181 -e HOST=$PUBLIC_IP:8181  -e KEYSTORE=$ACCOUNT -e KEYSTORE_PASSWORD=$PASSWORD  -v $HOME/keys:/app/config --name $NODE_NAME privasea/node-calc:v0.0.1
 	echo "$NODE_NAME节点已启动"
 }
 
 # 部署客户端
 function install_privasea_client(){
-	# 更新系统
-	sudo apt update && sudo apt upgrade -y
-	
-	# 安装Docker
-	curl -fsSL https://test.docker.com -o test-docker.sh
-	sudo sh test-docker.sh
-	sudo systemctl enable docker
-	sudo systemctl start docker
-	sudo groupadd docker
-	sudo usermod -aG docker $USER
-	docker version
+	# 检查Docker是否已安装
+	if [ -x "$(command -v docker)" ]; then
+	    echo "Docker is already installed."
+	else
+	    echo "Docker is not installed. Installing Docker..."
+	    # 更新apt包索引
+	    sudo apt-get update
+	    # 安装包以允许apt通过HTTPS使用仓库
+	    sudo apt-get install -y \
+	        apt-transport-https \
+	        ca-certificates \
+	        curl \
+	        software-properties-common
+	    # 添加Docker的官方GPG密钥
+	    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+	    # 设置稳定仓库
+	    sudo add-apt-repository \
+	        "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+	        $(lsb_release -cs) \
+	        stable"
+	    # 再次更新apt包索引
+	    sudo apt-get update -y
+	    # 安装最新版本的Docker CE
+	    sudo apt-get install -y docker-ce
+	    # 输出Docker的版本号来验证安装
+	    sudo docker --version
+	fi
 	
     # 构建客户端代码
-	docker pull privasea/node-client:v0.0.1
+	sudo docker pull privasea/node-client:v0.0.1
 	
 }
 
@@ -124,7 +140,7 @@ function start_privasea_client(){
 	read -p "请输入账号文件名: " ACCOUNT
 	read -p "请输入账号密码: " PASSWORD
 	
-	docker run -it -e KEYSTORE_PASSWORD=$PASSWORD  -v $HOME/keys:/app/config --name $CLIENT_NAME privasea/node-client:v0.0.1 task --keystore $ACCOUNT
+	sudo docker run -it -e KEYSTORE_PASSWORD=$PASSWORD  -v $HOME/keys:/app/config --name $CLIENT_NAME privasea/node-client:v0.0.1 task --keystore $ACCOUNT
 }
 
 # 客户端提交任务
@@ -135,7 +151,7 @@ function submit_a_task(){
 # 停止客户端
 function stop_privasea_client(){
 	read -p "请输入客户端名称: " CLIENT_NAME
-	docker stop $CLIENT_NAME
+	sudo docker stop $CLIENT_NAME
 }
 
 # 查看客户端日志
@@ -151,9 +167,9 @@ function uninstall_privasea_client(){
     case "$response" in
         [yY][eE][sS]|[yY]) 
             echo "开始卸载客户端..."
-            docker stop $CLIENT_NAME
-            docker rm $CLIENT_NAME
-            docker rmi $CLIENT_NAME
+            sudo docker stop $CLIENT_NAME
+            sudo docker rm $CLIENT_NAME
+            sudo docker rmi $CLIENT_NAME
             echo "客户端卸载完成。"
             ;;
         *)
